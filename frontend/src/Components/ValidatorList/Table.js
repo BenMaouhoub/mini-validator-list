@@ -1,5 +1,4 @@
 import React from "react";
-import classNames from "classnames";
 import PropTypes from "prop-types";
 import { withStyles } from "@material-ui/core/styles";
 import Table from "@material-ui/core/Table";
@@ -71,13 +70,11 @@ class EnhancedTableHead extends React.Component {
     return (
       <TableHead>
         <TableRow>
-          <TableCell />
           {columnData.map(column => {
             return (
               <TableCell
                 key={column.id}
                 numeric={column.numeric}
-                padding={column.disablePadding ? "none" : "default"}
                 sortDirection={orderBy === column.id ? order : false}
               >
                 <Tooltip
@@ -134,7 +131,8 @@ const styles = theme => ({
   link: {
     color: theme.palette.primary.main,
     textDecoration: "none"
-  }
+  },
+  chip: {}
 });
 
 const formatAgreementRate = floatNumber => {
@@ -205,27 +203,25 @@ class EnhancedTable extends React.Component {
                   .sort(getSorting(order, orderBy))
                   .map((v, index) => {
                     const count = index + 1;
+                    let domainElement = "(unverified)";
+                    if (v.domain) {
+                      domainElement = (
+                        <a
+                          className={classes.link}
+                          href={`https://${v.domain}`}
+                          target="_blank"
+                        >
+                          {v.domain}
+                          {!v.verified ? " " + "(unverified)" : ""}
+                        </a>
+                      );
+                    }
                     return (
                       <React.Fragment>
                         {
                           <TableRow hover tabIndex={-1} key={v.id}>
-                            <PrimaryTableCell padding="none" numeric>
-                              <span className={classes.numberCell}>
-                                {count}
-                              </span>
-                            </PrimaryTableCell>
                             <PrimaryTableCell component="th" scope="row">
-                              {v.domain ? (
-                                <a
-                                  className={classes.link}
-                                  href={`https://${v.domain}`}
-                                  target="_blank"
-                                >
-                                  {v.domain}
-                                </a>
-                              ) : (
-                                "unverified *"
-                              )}
+                              {domainElement}
                             </PrimaryTableCell>
                             <NumericTableCell numeric>
                               <code>
@@ -250,7 +246,6 @@ class EnhancedTable extends React.Component {
                         }
                         {this.state.secondary && (
                           <TableRow hover key={"pubkey-" + v.id}>
-                            <SecondaryTableCell numeric />
                             <SecondaryTableCell
                               colSpan={4}
                               component="th"

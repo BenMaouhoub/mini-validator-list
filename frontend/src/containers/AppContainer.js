@@ -28,7 +28,7 @@ const styles = theme => ({
     margin: theme.spacing.unit * 2
   },
   innerContent: {
-    maxWidth: 1024,
+    maxWidth: 900,
     margin: "0 auto"
   },
   gridItemTop: {

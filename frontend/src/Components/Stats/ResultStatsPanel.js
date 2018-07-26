@@ -27,9 +27,7 @@ class ResultStatsPanel extends React.Component {
 
     const stats = {
       total: validators.length,
-      runByRipple: validators.filter(
-        a => a.domain && a.domain.indexOf("ripple.com") >= 0
-      ).length,
+      runByRipple: validators.filter(a => a.is_ripple).length,
       default: validators.filter(a => a.default).length,
       verified: uniqueDomains.length
     };
@@ -42,19 +40,16 @@ class ResultStatsPanel extends React.Component {
           <SimpleCard value={stats.total} description="validators" />
         </Grid>
         <Grid item xs={6} sm={3}>
-          <SimpleCard
-            value={stats.default}
-            description="in default UNL"
-          />
+          <SimpleCard value={stats.default} description="in default UNL" />
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <SimpleCard value={stats.runByRipple} description="ripple.com" />
         </Grid>
         <Grid item xs={6} sm={3}>
           <SimpleCard
-            value={stats.runByRipple}
-            description="ripple.com"
+            value={Math.round(stats.dominance * 100) + "%"}
+            description="dominance"
           />
-        </Grid>
-        <Grid item xs={6} sm={3}>
-          <SimpleCard value={Math.round(stats.dominance * 100) + "%"} description="dominance" />
         </Grid>
       </Grid>
     );

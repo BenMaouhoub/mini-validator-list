@@ -36,6 +36,7 @@ export namespace Cache {
   export type MergedDataCache = {
     pubkey: string,
     domain: string,
+    is_ripple: boolean,
     verified: boolean,
     default: boolean,
     is_alt_net: boolean,

@@ -89,7 +89,7 @@ const styles = theme => ({
   suggestionsContainerOpen: {
     position: "absolute",
     zIndex: 1,
-    marginTop: theme.spacing.unit,
+    marginTop: theme.spacing.unit
   },
   suggestion: {
     display: "block"
@@ -102,10 +102,13 @@ const styles = theme => ({
 });
 
 class IntegrationAutosuggest extends React.Component {
-  state = {
-    value: "",
-    suggestions: []
-  };
+  constructor(props) {
+    super(props);
+    this.state = {
+      value: this.props.initialValue,
+      suggestions: []
+    };
+  }
 
   handleSuggestionsFetchRequested = ({ value }, callback) => {
     this.setState({
@@ -151,7 +154,7 @@ class IntegrationAutosuggest extends React.Component {
         inputProps={{
           classes,
           placeholder: "Filter by domain name...",
-          value: this.state.value,
+          value: this.props.value,
           onChange: this.handleChange
         }}
       />

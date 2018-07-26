@@ -14,7 +14,7 @@ module.exports = {
   },
   devtool: "source-map",
   resolve: {
-    extensions: ["*", ".js", ".jsx", ".ts", ".tsx", ".json"]
+    extensions: ["*", ".js", ".jsx", ".ts", ".tsx", ".json", ".svg"]
   },
   module: {
     rules: [
@@ -24,6 +24,20 @@ module.exports = {
         test: /\.(js|jsx)$/,
         exclude: /node_modules/,
         use: ["babel-loader"]
+      },
+      {
+        test: /\.svg$/,
+        use: [
+          {
+            loader: "babel-loader"
+          },
+          {
+            loader: "react-svg-loader",
+            options: {
+              jsx: true // true outputs JSX tags
+            }
+          }
+        ]
       }
     ]
   },

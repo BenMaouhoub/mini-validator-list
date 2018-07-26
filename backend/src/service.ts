@@ -13,6 +13,7 @@ import {
 import { TYPES } from "./inversify.types";
 import { isArray } from "util";
 import { geoDataMock } from "./geoDataCache";
+const { wellKnownValidators } = require("./wellKnownValidators");
 
 type CacheType = Cache.IDataCache<
   | Lib.IPStackResponse
@@ -25,6 +26,7 @@ type CacheType = Cache.IDataCache<
 @injectable()
 export default class Service implements IService {
   private _cache: HashMap<CacheType> = {};
+  private _rippleDomain = "ripple.com";
 
   constructor(
     @inject(TYPES.Lib.Logger) protected _logger: Lib.ILogger,
@@ -41,21 +43,25 @@ export default class Service implements IService {
       this._fetchDefaultUnl(),
       this._fetchDailyReport(),
       this._fetchValidators().then(() => {
-        return this._withGeoMockData(() => this._fetchGeoInfo(<
-          Cache.IDataCache<Lib.RippleData.ValidatorRawResponse>
-        >this._cache[Cache.TYPES.RIPPLE_VALIDATORS]));
+        return this._withGeoMockData(() =>
+          this._fetchGeoInfo(<
+            Cache.IDataCache<Lib.RippleData.ValidatorRawResponse>
+          >this._cache[Cache.TYPES.RIPPLE_VALIDATORS])
+        );
       })
     ]);
     this._mergeIntoValidators();
   }
 
-  private _withGeoMockData(apiCall){
-    if(process.env["NODE_ENV"] === "production"){
+  private _withGeoMockData(apiCall) {
+    if (process.env["NODE_ENV"] === "production") {
       return apiCall();
     } else {
       return new Promise(resolve => {
         this._cache[Cache.TYPES.IPSTACK_GEO] = <Cache.IGeoDataCache>geoDataMock;
-        this._logger.info(`cache[${Cache.TYPES.IPSTACK_GEO}] has been populated with MOCK data.`);
+        this._logger.info(
+          `cache[${Cache.TYPES.IPSTACK_GEO}] has been populated with MOCK data.`
+        );
         return resolve(true);
       });
     }
@@ -75,9 +81,11 @@ export default class Service implements IService {
     const geoInfoFetchInterval = this._configuration.getGeoInfoFetchInterval();
     setInterval(() => {
       if (this._cache[Cache.TYPES.RIPPLE_VALIDATORS]) {
-        this._withGeoMockData(this._fetchGeoInfo(<
-          Cache.IDataCache<Lib.RippleData.ValidatorRawResponse>
-        >this._cache[Cache.TYPES.RIPPLE_VALIDATORS]));
+        this._withGeoMockData(
+          this._fetchGeoInfo(<
+            Cache.IDataCache<Lib.RippleData.ValidatorRawResponse>
+          >this._cache[Cache.TYPES.RIPPLE_VALIDATORS])
+        );
       }
     }, geoInfoFetchInterval);
   }
@@ -223,12 +231,34 @@ export default class Service implements IService {
     );
     const altnetRegex = this._configuration.getAltNetDomainsPattern();
 
-    const mergedList = validators.list
-      .filter(v => v.validation_public_key)
-      .map(v => {
+    const allValidationPublicKeys = this._union(
+      defaultUnl,
+      validators.list.map(a => a.validation_public_key)
+    );
+
+    const mergedList = allValidationPublicKeys
+      .filter(pubkey => pubkey)
+      .map(pubkey => {
+        let v = this._first(
+          validators.list,
+          v => v.validation_public_key === pubkey
+        );
+        if (!v) {
+          v = {
+            validation_public_key: pubkey,
+            domain: undefined,
+            domain_state: "unverified"
+          };
+        }
+
+        // set domain
+        const isRipple = v && this._isRippleValidator(v);
+        v.domain = isRipple ? this._rippleDomain : v.domain;
+
         const data = {
           pubkey: v.validation_public_key,
           domain: v.domain,
+          is_ripple: isRipple,
           verified: v.domain_state === "verified",
           default: undefined,
           is_report_available: false,
@@ -253,7 +283,7 @@ export default class Service implements IService {
 
         // alt-net check 1: check if the alt net pattern matches.
         data.is_alt_net = v.domain && !!altnetRegex.exec(data.domain);
-        
+
         const reportItem = this._first<Lib.RippleData.DailyReportRawResponse>(
           dailyReports.list,
           report => report.validation_public_key === v.validation_public_key
@@ -311,6 +341,31 @@ export default class Service implements IService {
       list: mergedList
     };
     this._logger.info(`cache[${Cache.TYPES.MERGED_DATA}] has been populated.`);
+  }
+
+  private _isRippleValidator(validator: Lib.RippleData.ValidatorRawResponse) {
+    const isWellKnown =
+      validator.validation_public_key &&
+      wellKnownValidators[this._rippleDomain].indexOf(
+        validator.validation_public_key
+      ) >= 0;
+    const endsWith =
+      validator.domain &&
+      validator.domain.split("/")[0].endsWith(this._rippleDomain);
+
+    return isWellKnown || endsWith;
+  }
+
+  private _union(listA: string[], listB: string[]) {
+    const dict = {};
+    const add = (d, v) => {
+      if (!d[v]) {
+        d[v] = true;
+      }
+    };
+    listA.forEach(a => add(dict, a));
+    listB.forEach(b => add(dict, b));
+    return Object.keys(dict);
   }
 
   private async _waitForCache(name: string, who: string = "") {
